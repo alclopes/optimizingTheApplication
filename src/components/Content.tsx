@@ -1,38 +1,70 @@
-import { MovieCard } from "./MovieCard";
+import { useEffect, useState } from 'react'
 
-interface ContentProps {
-  selectedGenre: {
-    id: number;
-    name: 'action' | 'comedy' | 'documentary' | 'drama' | 'horror' | 'family';
-    title: string;
-  };
+import { api } from '../services/api'
 
-  movies: Array<{
-    imdbID: string;
-    Title: string;
-    Poster: string;
-    Ratings: Array<{
-      Source: string;
-      Value: string;
-    }>;
-    Runtime: string;
-  }>;
+import { MemoContent } from './MemoContent'
+
+import { MovieProps, GenreResponseProps } from '../@types'
+
+import '../styles/content.scss'
+
+interface Props {
+	selectedGenreId: number
 }
 
-export function Content({ selectedGenre, movies }: ContentProps) {
-  return (
-    <div className="container">
-      <header>
-        <span className="category">Categoria:<span> {selectedGenre.title}</span></span>
-      </header>
+export function Content({ selectedGenreId }: Props) {
+	const [movies, setMovies] = useState<MovieProps[]>([])
+	const [selectedGenre, setSelectedGenre] = useState<GenreResponseProps>(
+		{} as GenreResponseProps
+	)
 
-      <main>
-        <div className="movies-list">
-          {movies.map(movie => (
-            <MovieCard key={movie.imdbID} title={movie.Title} poster={movie.Poster} runtime={movie.Runtime} rating={movie.Ratings[0].Value} />
-          ))}
-        </div>
-      </main>
-    </div>
-  )
+	function handleGenreResponseProps() {
+		api
+			.get<GenreResponseProps>(`genres/${selectedGenreId}`)
+			.then((response) => {
+				setSelectedGenre(response.data)
+			})
+	}
+
+	useEffect(() => {
+		handleGenreResponseProps()
+	}, [selectedGenreId])
+
+	function handleMovieProps() {
+		// let i = 0
+		// while (i < 200000) i++
+		api
+			.get<MovieProps[]>(`movies/?Genre_id=${selectedGenreId}`)
+			.then((response) => {
+				setMovies(response.data)
+			})
+	}
+
+	//const t1 = performance.now()
+	useEffect(() => {
+		handleMovieProps()
+	}, [selectedGenreId])
+	//console.log('semMemo:', performance.now() - t1)
+
+	return (
+		<div className='container'>
+			<header>
+				<span className='category'>Categoria: {selectedGenre.title}</span>
+			</header>
+			<main>
+				<div className='movies-list'>
+					{movies.map((movie) => (
+						<MemoContent
+							key={movie.imdbID}
+							imdbID={movie.imdbID}
+							Title={movie.Title}
+							Poster={movie.Poster}
+							Ratings={movie.Ratings}
+							Runtime={movie.Runtime}
+						/>
+					))}
+				</div>
+			</main>
+		</div>
+	)
 }
